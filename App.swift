@@ -26,6 +26,36 @@ enum Pay {
         guard span > 0 else { return 0 }
         return elapsed(now: nowHour * 3600, start: start * 3600, end: end * 3600) / span
     }
+
+    /// 이번 달/올해의 근무일 수. done은 오늘 이전까지(오늘 제외).
+    /// ponytail: 달력을 하루씩 훑는다(최대 366회/틱). 프로파일에 잡히면 날짜 키로 캐시.
+    static func workdays(scope: Scope, now: Date, cal: Calendar = .current) -> (done: Double, total: Double) {
+        guard let span = cal.dateInterval(of: scope == .month ? .month : .year, for: now) else { return (0, 1) }
+        let today = cal.startOfDay(for: now)
+        var d = span.start, done = 0.0, total = 0.0
+        while d < span.end {
+            if !cal.isDateInWeekend(d) {
+                total += 1
+                if d < today { done += 1 }
+            }
+            d = cal.date(byAdding: .day, value: 1, to: d)!
+        }
+        return (done, total)
+    }
+
+    /// 기간 진행률 = (지난 근무일 + 오늘 몫) / 전체 근무일
+    static func periodProgress(scope: Scope, now: Date, dayProgress: Double, cal: Calendar = .current) -> Double {
+        let w = workdays(scope: scope, now: now, cal: cal)
+        guard w.total > 0 else { return 0 }
+        let todayShare = cal.isDateInWeekend(now) ? 0 : dayProgress
+        return min((w.done + todayShare) / w.total, 1)
+    }
+}
+
+/// 메뉴바 라벨과 패널이 같이 보는 기간. 원문이 그대로 UI 라벨이다.
+enum Scope: String, CaseIterable, Identifiable {
+    case day = "오늘", month = "이번 달", year = "올해"
+    var id: String { rawValue }
 }
 
 // MARK: - 상태
@@ -53,12 +83,21 @@ struct Config {
     @AppStorage("startHour") var start = 9.0
     @AppStorage("endHour") var end = 18.0
     @AppStorage("workdaysPerYear") var workdays = 250
+    @AppStorage("scope") var scope = Scope.day
 
-    func earned(_ now: Date) -> Double {
-        Pay.earned(annual: annual, start: start, end: end, workdays: workdays, nowHour: now.hourOfDay)
+    /// 선택한 기간을 꽉 채웠을 때의 금액
+    var total: Double {
+        switch scope {
+        case .day:   return perSecond * (end - start) * 3600
+        case .month: return Double(annual) / 12
+        case .year:  return Double(annual)
+        }
     }
+    func earned(_ now: Date) -> Double { total * progress(now) }
+
     func progress(_ now: Date) -> Double {
-        Pay.progress(start: start, end: end, nowHour: now.hourOfDay)
+        let day = Pay.progress(start: start, end: end, nowHour: now.hourOfDay)
+        return scope == .day ? day : Pay.periodProgress(scope: scope, now: now, dayProgress: day)
     }
     var perSecond: Double {
         Pay.perSecond(annual: annual, start: start, end: end, workdays: workdays)
@@ -103,6 +142,7 @@ struct Arc: Shape {
 }
 
 struct Gauge: View {
+    let title: String
     let progress: Double
     let amount: Double
     let caption: String
@@ -146,7 +186,7 @@ struct Gauge: View {
                     .opacity(progress > 0.002 ? 1 : 0)
 
                 VStack(spacing: 3) {
-                    Text("오늘 번 돈")
+                    Text(title)
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(Ink.dim)
                         .textCase(.uppercase).tracking(1.2)
@@ -236,14 +276,21 @@ struct MenuLabel: View {
 
 // MARK: - 패널
 
+/// 패널 로컬 상태. `@State`를 안 쓴다 — Command Line Tools에는 `SwiftUIMacros` 플러그인이
+/// 없어서 Xcode 없이는 `@State` 확장이 실패한다. 이 앱은 CLT만으로 빌드하는 게 전제다.
+final class PanelState: ObservableObject {
+    @Published var showSettings = false
+    @Published var glow = 0.0
+}
+
 struct PanelView: View {
     @EnvironmentObject var clock: Clock
     @AppStorage("annualSalary") private var annual = 50_000_000
     @AppStorage("startHour") private var start = 9.0
     @AppStorage("endHour") private var end = 18.0
     @AppStorage("workdaysPerYear") private var workdays = 250
-    @State private var showSettings = false
-    @State private var glow = 0.0
+    @AppStorage("scope") private var scope = Scope.day
+    @StateObject private var ui = PanelState()
 
     private var cfg: Config { Config() }
     private var nowHour: Double { clock.now.hourOfDay }
@@ -251,26 +298,43 @@ struct PanelView: View {
     private var progress: Double { cfg.progress(clock.now) }
 
     private var caption: String {
+        let pct = "\(Int(progress * 100))%"
+        if scope != .day {
+            let w = Pay.workdays(scope: scope, now: clock.now)
+            return "\(pct)  ·  근무일 \(Int(w.total - w.done))일 남음"
+        }
         if nowHour < start { return "출근까지 \(hm(start - nowHour))" }
         if nowHour >= end { return "퇴근! 🎉" }
-        return "\(Int(progress * 100))%  ·  \(hm(end - nowHour)) 남음"
+        return "\(pct)  ·  \(hm(end - nowHour)) 남음"
+    }
+
+    /// 게이지 양끝 라벨 — 기간의 시작과 끝
+    private var bounds: (String, String) {
+        switch scope {
+        case .day:   return (clock24(start), clock24(end))
+        case .month: let n = Calendar.current.range(of: .day, in: .month, for: clock.now)?.count ?? 30
+                     return ("1일", "\(n)일")
+        case .year:  return ("1월", "12월")
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            Gauge(progress: progress, amount: earned, caption: caption,
-                  from: clock24(start), to: clock24(end), glow: glow)
+            scopePicker.padding(.top, 14)
+
+            Gauge(title: "\(scope.rawValue) 번 돈", progress: progress, amount: earned,
+                  caption: caption, from: bounds.0, to: bounds.1, glow: ui.glow)
                 .frame(height: 200)
-                .padding(.top, 16)
+                .padding(.top, 8)
                 .animation(.easeOut(duration: 0.5), value: earned)
 
             HStack(spacing: 8) {
                 chip("초당", money(cfg.perSecond, 1))
-                chip("오늘 총액", money(cfg.perSecond * (end - start) * 3600))
+                chip("\(scope.rawValue) 총액", money(cfg.total))
             }
             .padding(.top, 2)
 
-            DisclosureGroup(isExpanded: $showSettings) {
+            DisclosureGroup(isExpanded: $ui.showSettings) {
                 VStack(alignment: .leading, spacing: 9) {
                     field("연봉 (세전)") {
                         TextField("", value: $annual, format: .number).frame(width: 108)
@@ -313,10 +377,32 @@ struct PanelView: View {
         .background(Ink.panel)
         .environment(\.colorScheme, .dark)
         // ₩10,000 넘길 때마다 한 번 번쩍
-        .onChange(of: Int(earned) / 10_000) { _, _ in
-            withAnimation(.easeOut(duration: 0.18)) { glow = 1 }
-            withAnimation(.easeOut(duration: 0.9).delay(0.18)) { glow = 0 }
+        .onChange(of: Int(earned / max(cfg.total / 50, 1))) { _, _ in
+            withAnimation(.easeOut(duration: 0.18)) { ui.glow = 1 }
+            withAnimation(.easeOut(duration: 0.9).delay(0.18)) { ui.glow = 0 }
         }
+    }
+
+    /// 기간 세그먼트. 시스템 Picker(.segmented)를 안 쓴다 — ImageRenderer가 못 그려서
+    /// ./build.sh preview가 깨지고, 커스텀 다크 판에 시스템 컨트롤이 겉돈다.
+    private var scopePicker: some View {
+        HStack(spacing: 2) {
+            ForEach(Scope.allCases) { s in
+                Text(s.rawValue)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(s == scope ? AnyShapeStyle(.black.opacity(0.82)) : AnyShapeStyle(Ink.dim))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 5)
+                    .background(s == scope ? AnyShapeStyle(Ink.money) : AnyShapeStyle(Color.clear),
+                                in: RoundedRectangle(cornerRadius: 7))
+                    .contentShape(Rectangle())
+                    .onTapGesture { scope = s }
+            }
+        }
+        .padding(2)
+        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 9))
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(.white.opacity(0.07)))
+        .animation(.easeOut(duration: 0.15), value: scope)
     }
 
     private func chip(_ label: String, _ value: String) -> some View {
@@ -383,6 +469,24 @@ func selfTest() {
     // ponytail: 야간 근무(퇴근<출근)는 0원 처리. 필요해지면 end에 +24 더하는 한 줄.
     precondition(Pay.perSecond(annual: a, start: 22, end: 6, workdays: wd) == 0, "역전 구간")
     precondition(Pay.perSecond(annual: 0, start: s, end: e, workdays: wd) == 0, "연봉 0")
+
+    // 기간 집계 — 2026-09-14(월) 기준. 9월 평일 22일, 오늘 이전 평일 9일.
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = TimeZone(identifier: "Asia/Seoul")!
+    let day = cal.date(from: DateComponents(year: 2026, month: 9, day: 14, hour: 13, minute: 30))!
+
+    let m = Pay.workdays(scope: .month, now: day, cal: cal)
+    precondition(m == (9, 22), "9월 근무일 \(m)")
+    let y = Pay.workdays(scope: .year, now: day, cal: cal)
+    precondition(y.total == 261, "2026년 평일 \(y.total)")
+
+    // 하루 절반 지났으면 9.5/22
+    let mp = Pay.periodProgress(scope: .month, now: day, dayProgress: 0.5, cal: cal)
+    precondition(abs(mp - 9.5 / 22) < 1e-9, "월 진행률")
+
+    // 주말엔 오늘 몫을 안 더한다
+    let sat = cal.date(from: DateComponents(year: 2026, month: 9, day: 12, hour: 13))!
+    precondition(Pay.periodProgress(scope: .month, now: sat, dayProgress: 0.5, cal: cal) == 9 / 22.0, "주말")
 
     print("✅ selftest 통과")
 }
