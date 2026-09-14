@@ -107,17 +107,16 @@ struct Config {
 // MARK: - 디자인 토큰 (README.md § 디자인)
 
 enum Ink {
-    static let mint = Color(red: 0.53, green: 0.96, blue: 0.68)
-    static let cyan = Color(red: 0.29, green: 0.85, blue: 0.90)
-    static let money = LinearGradient(colors: [mint, cyan], startPoint: .leading, endPoint: .trailing)
+    static let mint = Color(red: 0.57, green: 0.86, blue: 0.75)
+    static let cyan = Color(red: 0.42, green: 0.74, blue: 0.72)
     static let gauge = AngularGradient(colors: [mint, cyan, mint],
                                        center: .center, angle: .degrees(140))
-    /// 패널 전체 배경. 기본 머티리얼 대신 어두운 판을 깔아야 민트가 산다.
+    /// 패널 전체 배경. 얇은 민트 호와 화이트 금액을 받치는 차콜.
     static let panel = LinearGradient(
         colors: [Color(red: 0.09, green: 0.11, blue: 0.13),
                  Color(red: 0.05, green: 0.06, blue: 0.08)],
         startPoint: .top, endPoint: .bottom)
-    static let dim = Color.white.opacity(0.42)
+    static let dim = Color.white.opacity(0.58)
 }
 
 private let won = Decimal.FormatStyle.Currency(code: "KRW", locale: Locale(identifier: "ko_KR"))
@@ -160,47 +159,45 @@ struct Gauge: View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
             ZStack {
-                Arc().stroke(Color.white.opacity(0.07), style: .init(lineWidth: 10, lineCap: .round))
+                Arc().stroke(Color.white.opacity(0.07), style: .init(lineWidth: 3, lineCap: .round))
                     .padding(11)
 
                 // 눈금 40개. 지나간 눈금만 밝다.
                 ForEach(0..<41) { i in
                     let t = Double(i) / 40
                     Capsule()
-                        .fill(t <= progress ? Ink.mint.opacity(0.5) : Color.white.opacity(0.09))
-                        .frame(width: 1.5, height: t.truncatingRemainder(dividingBy: 0.25) < 0.01 ? 7 : 4)
+                        .fill(t <= progress ? Ink.mint.opacity(0.38) : Color.white.opacity(0.09))
+                        .frame(width: 1, height: t.truncatingRemainder(dividingBy: 0.25) < 0.01 ? 6 : 3)
                         .offset(y: -s / 2 + 26)
                         .rotationEffect(.degrees(240 * t - 120))
                 }
 
                 Arc(to: max(progress, 0.0001))
-                    .stroke(Ink.gauge, style: .init(lineWidth: 10, lineCap: .round))
+                    .stroke(Ink.gauge, style: .init(lineWidth: 3, lineCap: .round))
                     .padding(11)
-                    .shadow(color: Ink.mint.opacity(0.55 + glow), radius: 10 + glow * 14)
+                    .shadow(color: Ink.mint.opacity(0.12 + glow * 0.15), radius: 4 + glow * 3)
 
                 Circle()
                     .fill(.white)
-                    .frame(width: 7, height: 7)
-                    .shadow(color: Ink.cyan.opacity(0.9), radius: 6)
+                    .frame(width: 5, height: 5)
+                    .shadow(color: Ink.mint.opacity(0.35), radius: 3)
                     .position(tip(in: s))
                     .opacity(progress > 0.002 ? 1 : 0)
 
-                VStack(spacing: 3) {
+                VStack(spacing: 10) {
                     Text(title)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Ink.dim)
-                        .textCase(.uppercase).tracking(1.2)
                     Text(money(amount))
-                        .font(.system(size: 29, weight: .bold, design: .rounded))
+                        .font(.system(size: 34, weight: .semibold))
                         .monospacedDigit()
-                        .foregroundStyle(Ink.money)
+                        .foregroundStyle(.white.opacity(0.95))
                         .contentTransition(.numericText(value: amount))
-                        .lineLimit(1).minimumScaleFactor(0.5)
-                        .shadow(color: Ink.mint.opacity(0.25 + glow * 0.6), radius: 12 + glow * 10)
-                        .padding(.horizontal, 44)
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                        .padding(.horizontal, 18)
                     Text(caption)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(Ink.dim)
                         .monospacedDigit()
                 }
 
@@ -304,7 +301,7 @@ struct PanelView: View {
             return "\(pct)  ·  근무일 \(Int(w.total - w.done))일 남음"
         }
         if nowHour < start { return "출근까지 \(hm(start - nowHour))" }
-        if nowHour >= end { return "퇴근! 🎉" }
+        if nowHour >= end { return "오늘 근무 완료" }
         return "\(pct)  ·  \(hm(end - nowHour)) 남음"
     }
 
@@ -320,63 +317,83 @@ struct PanelView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            scopePicker.padding(.top, 14)
+            HStack {
+                Text("SalaryTick")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.88))
+                Spacer()
+                Text("수입 현황")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Ink.dim)
+            }
+            .padding(.top, 22)
+            .padding(.bottom, 18)
+
+            scopePicker
 
             Gauge(title: "\(scope.rawValue) 번 돈", progress: progress, amount: earned,
                   caption: caption, from: bounds.0, to: bounds.1, glow: ui.glow)
-                .frame(height: 200)
-                .padding(.top, 8)
+                .frame(width: 256, height: 256)
+                .padding(.top, 18)
                 .animation(.easeOut(duration: 0.5), value: earned)
 
-            HStack(spacing: 8) {
-                chip("초당", money(cfg.perSecond, 1))
+            HStack(spacing: 16) {
+                chip("초당 수입", money(cfg.perSecond, 1))
+                Rectangle().fill(.white.opacity(0.08)).frame(width: 1, height: 30)
                 chip("\(scope.rawValue) 총액", money(cfg.total))
             }
-            .padding(.top, 2)
+            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .background(.white.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
+            .padding(.top, -12)
 
-            DisclosureGroup(isExpanded: $ui.showSettings) {
-                VStack(alignment: .leading, spacing: 9) {
-                    field("연봉 (세전)") {
-                        TextField("", value: $annual, format: .number).frame(width: 108)
+            Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
+                .padding(.top, 20)
+
+            HStack(alignment: .top, spacing: 18) {
+                DisclosureGroup(isExpanded: $ui.showSettings) {
+                    VStack(alignment: .leading, spacing: 9) {
+                        field("연봉 (세전)") {
+                            TextField("", value: $annual, format: .number).frame(width: 108)
+                        }
+                        field("출근") {
+                            DatePicker("", selection: hourBinding($start), displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                        field("퇴근") {
+                            DatePicker("", selection: hourBinding($end), displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                        field("연간 근무일") {
+                            TextField("", value: $workdays, format: .number).frame(width: 52)
+                        }
+                        Toggle("로그인 시 자동 실행", isOn: loginItem)
+                            .toggleStyle(.switch).controlSize(.mini).tint(Ink.mint)
+                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.8))
                     }
-                    field("출근") {
-                        DatePicker("", selection: hourBinding($start), displayedComponents: .hourAndMinute)
-                            .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .padding(.top, 10)
+                } label: {
+                    HStack {
+                        Text("설정").font(.system(size: 12, weight: .medium))
+                        Spacer()
+                        Text("세전 기준").font(.system(size: 10))
                     }
-                    field("퇴근") {
-                        DatePicker("", selection: hourBinding($end), displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                    }
-                    field("연간 근무일") {
-                        TextField("", value: $workdays, format: .number).frame(width: 52)
-                    }
-                    Toggle("로그인 시 자동 실행", isOn: loginItem)
-                        .toggleStyle(.switch).controlSize(.mini).tint(Ink.mint)
-                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(Ink.dim)
                 }
-                .textFieldStyle(.roundedBorder)
-                .padding(.top, 10)
-            } label: {
-                Text("설정").font(.system(size: 12, weight: .medium)).foregroundStyle(Ink.dim)
-            }
-            .padding(.top, 16)
 
-            Divider().overlay(.white.opacity(0.08)).padding(.top, 14)
-
-            HStack {
-                Text("SalaryTick").font(.system(size: 10)).foregroundStyle(.white.opacity(0.25))
-                Spacer()
-                Button("종료") { NSApplication.shared.terminate(nil) }
-                    .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Ink.dim)
+            Button("종료") { NSApplication.shared.terminate(nil) }
+                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Ink.dim)
+                .padding(.top, 2)
             }
-            .padding(.top, 10)
+            .padding(.top, 14)
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 16)
-        .frame(width: 320)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 20)
+        .frame(width: 344)
         .background(Ink.panel)
         .environment(\.colorScheme, .dark)
-        // ₩10,000 넘길 때마다 한 번 번쩍
+        // 기간 총액의 2%마다 게이지를 은은하게 강조
         .onChange(of: Int(earned / max(cfg.total / 50, 1))) { _, _ in
             withAnimation(.easeOut(duration: 0.18)) { ui.glow = 1 }
             withAnimation(.easeOut(duration: 0.9).delay(0.18)) { ui.glow = 0 }
@@ -388,33 +405,34 @@ struct PanelView: View {
     private var scopePicker: some View {
         HStack(spacing: 2) {
             ForEach(Scope.allCases) { s in
-                Text(s.rawValue)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(s == scope ? AnyShapeStyle(.black.opacity(0.82)) : AnyShapeStyle(Ink.dim))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
-                    .background(s == scope ? AnyShapeStyle(Ink.money) : AnyShapeStyle(Color.clear),
-                                in: RoundedRectangle(cornerRadius: 7))
-                    .contentShape(Rectangle())
-                    .onTapGesture { scope = s }
+                Button { scope = s } label: {
+                    Text(s.rawValue)
+                        .font(.system(size: 12, weight: s == scope ? .semibold : .medium))
+                        .foregroundStyle(s == scope ? .white.opacity(0.95) : Ink.dim)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(s == scope ? Color.white.opacity(0.10) : .clear,
+                                    in: RoundedRectangle(cornerRadius: 7))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(s == scope ? [.isSelected] : [])
             }
         }
-        .padding(2)
-        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 9))
-        .overlay(RoundedRectangle(cornerRadius: 9).stroke(.white.opacity(0.07)))
+        .padding(3)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(.white.opacity(0.04)))
         .animation(.easeOut(duration: 0.15), value: scope)
     }
 
     private func chip(_ label: String, _ value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(label).font(.system(size: 10)).foregroundStyle(Ink.dim)
-            Text(value).font(.system(size: 14, weight: .semibold, design: .rounded))
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label).font(.system(size: 11)).foregroundStyle(Ink.dim)
+            Text(value).font(.system(size: 15, weight: .medium))
                 .monospacedDigit().foregroundStyle(.white.opacity(0.92))
+                .lineLimit(1).minimumScaleFactor(0.75)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 9)
-        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.07)))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func field<V: View>(_ label: String, @ViewBuilder _ control: () -> V) -> some View {

@@ -1,5 +1,5 @@
 // 앱 아이콘 생성기: swift make-icon.swift → AppIcon.icns
-// 민트→시안 스퀘어클 + 차콜 ₩. build.sh가 자동 호출한다.
+// 차콜 스퀘어클 + 민트 진행 호 + 화이트 ₩. build.sh가 자동 호출한다.
 import AppKit
 
 let S: CGFloat = 1024
@@ -18,23 +18,40 @@ ctx.setShadow(offset: CGSize(width: 0, height: -S * 0.012), blur: S * 0.03,
 NSColor.black.setFill(); squircle.fill()
 ctx.restoreGState()
 
-// 민트 → 시안
+// 패널과 같은 차콜 바탕
 squircle.addClip()
-NSGradient(colors: [NSColor(srgbRed: 0.53, green: 0.96, blue: 0.68, alpha: 1),
-                    NSColor(srgbRed: 0.29, green: 0.85, blue: 0.90, alpha: 1)])!
-    .draw(in: rect, angle: -60)
+NSGradient(colors: [NSColor(srgbRed: 0.13, green: 0.16, blue: 0.18, alpha: 1),
+                    NSColor(srgbRed: 0.05, green: 0.07, blue: 0.09, alpha: 1)])!
+    .draw(in: rect, angle: -90)
 
-// 상단 하이라이트로 살짝 입체감
-NSGradient(colors: [NSColor.white.withAlphaComponent(0.22), NSColor.white.withAlphaComponent(0)])!
-    .draw(in: NSRect(x: rect.minX, y: rect.midY, width: rect.width, height: rect.height / 2), angle: -90)
+// 패널의 240° 진행 호를 작은 크기에서도 읽히는 심벌로 사용
+let center = NSPoint(x: S / 2, y: S / 2)
+let radius = S * 0.29
+let track = NSBezierPath()
+track.appendArc(withCenter: center, radius: radius, startAngle: 210, endAngle: -30, clockwise: true)
+track.lineWidth = S * 0.022
+track.lineCapStyle = .round
+NSColor.white.withAlphaComponent(0.10).setStroke()
+track.stroke()
+let progress = NSBezierPath()
+progress.appendArc(withCenter: center, radius: radius, startAngle: 210, endAngle: 30, clockwise: true)
+progress.lineWidth = S * 0.022
+progress.lineCapStyle = .round
+NSColor(srgbRed: 0.57, green: 0.86, blue: 0.75, alpha: 1).setStroke()
+progress.stroke()
+let angle = CGFloat.pi / 6
+let tip = NSPoint(x: center.x + cos(angle) * radius, y: center.y + sin(angle) * radius)
+NSColor.white.setFill()
+NSBezierPath(ovalIn: NSRect(x: tip.x - S * 0.014, y: tip.y - S * 0.014,
+                          width: S * 0.028, height: S * 0.028)).fill()
 
 // ₩
-let desc = NSFont.systemFont(ofSize: S * 0.46, weight: .semibold).fontDescriptor
-    .withDesign(.rounded) ?? NSFont.systemFont(ofSize: S * 0.46, weight: .semibold).fontDescriptor
-let font = NSFont(descriptor: desc, size: S * 0.46)!
+let desc = NSFont.systemFont(ofSize: S * 0.30, weight: .semibold).fontDescriptor
+    .withDesign(.default) ?? NSFont.systemFont(ofSize: S * 0.30, weight: .semibold).fontDescriptor
+let font = NSFont(descriptor: desc, size: S * 0.30)!
 let str = NSAttributedString(string: "₩", attributes: [
     .font: font,
-    .foregroundColor: NSColor(srgbRed: 0.05, green: 0.11, blue: 0.13, alpha: 0.92),
+    .foregroundColor: NSColor.white.withAlphaComponent(0.94),
 ])
 let sz = str.size()
 str.draw(at: NSPoint(x: rect.midX - sz.width / 2, y: rect.midY - sz.height / 2 + S * 0.012))
