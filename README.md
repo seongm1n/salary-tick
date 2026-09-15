@@ -18,10 +18,16 @@
 xcode-select --install
 ```
 
-2. 앱 설치
+2. 소스 내려받기
 
 ```sh
-cd ~/personal/frontend/salary-tick
+git clone https://github.com/seongm1n/salary-tick.git ~/salary-tick
+```
+
+3. 앱 설치
+
+```sh
+cd ~/salary-tick
 ./build.sh install
 ```
 
@@ -33,7 +39,7 @@ cd ~/personal/frontend/salary-tick
 - 메뉴바 금액 클릭 → 패널. **설정**에서 연봉, 출퇴근 시각, 연간 근무일수 입력.
 - **로그인 시 자동 실행** 켜두면 컴퓨터 켤 때마다 자동으로 뜹니다.
 - 종료: 패널의 **종료** 버튼. 다시 켜기: 응용 프로그램 → SalaryTick.
-- 업데이트: `./build.sh install` 다시 실행.
+- 업데이트: `cd ~/salary-tick && git pull && ./build.sh install`
 
 ## 그 밖의 명령
 
