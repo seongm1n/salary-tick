@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { exit } from "@tauri-apps/plugin-process";
+import { useAutostart } from "../hooks/useAutostart";
 import { useClock } from "../hooks/useClock";
 import { useConfigStore } from "../hooks/useConfigStore";
 import { Gauge } from "./Gauge";
@@ -42,6 +43,7 @@ export function Panel() {
   const now = useClock();
   const [cfg, setCfg] = useConfigStore();
   const [showSettings, setShowSettings] = useState(false);
+  const [autostart, setAutostart] = useAutostart();
 
   const nowHour = hourOfDay(now);
   const earned = configEarned(cfg, now);
@@ -159,10 +161,18 @@ export function Panel() {
                 onChange={(e) => setCfg((c) => ({ ...c, workdays: Number(e.target.value) }))}
               />
             </label>
+            <label className="field">
+              <span>로그인 시 자동 실행</span>
+              <input
+                type="checkbox"
+                checked={autostart}
+                onChange={(e) => setAutostart(e.target.checked)}
+              />
+            </label>
           </div>
         )}
 
-        <button className="quit-btn" onClick={() => getCurrentWindow().close()}>
+        <button className="quit-btn" onClick={() => exit(0)}>
           종료
         </button>
       </div>

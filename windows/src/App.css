@@ -164,6 +164,13 @@ body,
   width: 108px;
 }
 
+.field input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  accent-color: #6bbcb8;
+}
+
 .quit-btn {
   margin-top: 14px;
   background: none;

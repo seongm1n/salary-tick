@@ -8,6 +8,8 @@
     "core:window:allow-start-dragging",
     "core:window:allow-close",
     "opener:default",
-    "store:default"
+    "store:default",
+    "process:default",
+    "autostart:default"
   ]
 }
