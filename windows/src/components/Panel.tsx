@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { exit } from "@tauri-apps/plugin-process";
 import { useAutostart } from "../hooks/useAutostart";
 import { useClock } from "../hooks/useClock";
 import { useConfigStore } from "../hooks/useConfigStore";
@@ -171,10 +170,6 @@ export function Panel() {
             </label>
           </div>
         )}
-
-        <button className="quit-btn" onClick={() => exit(0)}>
-          종료
-        </button>
       </div>
     </div>
   );
