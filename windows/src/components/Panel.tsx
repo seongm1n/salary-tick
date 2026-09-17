@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useClock } from "../hooks/useClock";
+import { useConfigStore } from "../hooks/useConfigStore";
 import { Gauge } from "./Gauge";
 import { money } from "../lib/money";
 import {
-  type Config,
   type Scope,
   configEarned,
   configProgress,
@@ -40,13 +40,7 @@ function timeInputToHour(v: string): number {
 
 export function Panel() {
   const now = useClock();
-  const [cfg, setCfg] = useState<Config>({
-    annual: 50_000_000,
-    start: 9,
-    end: 18,
-    workdays: 250,
-    scope: "day",
-  });
+  const [cfg, setCfg] = useConfigStore();
   const [showSettings, setShowSettings] = useState(false);
 
   const nowHour = hourOfDay(now);
