@@ -16,8 +16,9 @@ pub fn run() {
         ))
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "열기", true, None::<&str>)?;
+            let hide = MenuItem::with_id(app, "hide", "숨기기", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &quit])?;
+            let menu = Menu::with_items(app, &[&show, &hide, &quit])?;
 
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -28,6 +29,11 @@ pub fn run() {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
                             let _ = w.set_focus();
+                        }
+                    }
+                    "hide" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.hide();
                         }
                     }
                     "quit" => app.exit(0),
