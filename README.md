@@ -28,7 +28,7 @@ git clone https://github.com/seongm1n/salary-tick.git ~/salary-tick
 
 ```sh
 cd ~/salary-tick
-./build.sh install
+./mac/build.sh install
 ```
 
 `✅ /Applications/SalaryTick.app` 이 나오면 끝. 메뉴바 오른쪽에 금액이 뜹니다.
@@ -39,12 +39,12 @@ cd ~/salary-tick
 - 메뉴바 금액 클릭 → 패널. **설정**에서 연봉, 출퇴근 시각, 연간 근무일수 입력.
 - **로그인 시 자동 실행** 켜두면 컴퓨터 켤 때마다 자동으로 뜹니다.
 - 종료: 패널의 **종료** 버튼. 다시 켜기: 응용 프로그램 → SalaryTick.
-- 업데이트: `cd ~/salary-tick && git pull && ./build.sh install`
+- 업데이트: `cd ~/salary-tick && git pull && ./mac/build.sh install`
 
 ## 그 밖의 명령
 
 ```sh
-./build.sh run   # 설치 없이 바로 실행
-./build.sh test  # 계산 검증
-./build.sh       # 빌드만
+./mac/build.sh run   # 설치 없이 바로 실행
+./mac/build.sh test  # 계산 검증
+./mac/build.sh       # 빌드만
 ```
