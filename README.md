@@ -1,6 +1,6 @@
 # SalaryTick
 
-메뉴바에서 지금까지 번 돈이 1초마다 올라가는 걸 보여주는 macOS 앱.
+지금까지 번 돈이 1초마다 올라가는 걸 보여주는 데스크탑 앱. macOS(메뉴바)와 Windows(위젯 창) 지원.
 
 ```
 ┌ 메뉴바 ─────────────────┐
@@ -8,7 +8,7 @@
 └─────────────────────────┘
 ```
 
-## 설치
+## macOS
 
 터미널(⌘ + 스페이스 → "터미널")에서 한 줄씩 실행합니다.
 
@@ -34,17 +34,25 @@ cd ~/salary-tick
 `✅ /Applications/SalaryTick.app` 이 나오면 끝. 메뉴바 오른쪽에 금액이 뜹니다.
 (Dock에는 뜨지 않습니다.)
 
-## 사용
+### 사용
 
 - 메뉴바 금액 클릭 → 패널. **설정**에서 연봉, 출퇴근 시각, 연간 근무일수 입력.
 - **로그인 시 자동 실행** 켜두면 컴퓨터 켤 때마다 자동으로 뜹니다.
 - 종료: 패널의 **종료** 버튼. 다시 켜기: 응용 프로그램 → SalaryTick.
 - 업데이트: `cd ~/salary-tick && git pull && ./mac/build.sh install`
 
-## 그 밖의 명령
+### 그 밖의 명령
 
 ```sh
 ./mac/build.sh run   # 설치 없이 바로 실행
 ./mac/build.sh test  # 계산 검증
 ./mac/build.sh       # 빌드만
 ```
+
+## Windows
+
+[Releases](https://github.com/seongm1n/salary-tick/releases)에서 `SalaryTick_x.x.x_x64-setup.exe` (또는 `.msi`) 받아서 설치.
+
+화면 구석에 작은 위젯 창이 뜨고, 트레이 아이콘 클릭으로 보이기/숨기기 전환됩니다.
+
+소스에서 직접 빌드하려면 [windows/README.md](windows/README.md) 참고.
